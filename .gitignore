@@ -2,3 +2,6 @@
 !*.sh
 *.swp
 *.swo
+*.csv
+*.dSYM
+*.numbers

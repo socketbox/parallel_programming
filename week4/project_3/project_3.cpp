@@ -54,8 +54,8 @@ void GrainDeer();
 void Humans();
 void WaitBarrier();
 void InitBarrier(int t);
-//float GetTemp(const int Month, unsigned int seed);
-//float GetPrecip(const int Month, unsigned int seed);
+float GetTemp(const int Month, unsigned int seed);
+float GetPrecip(const int Month, unsigned int seed);
 
 int main()
 {
@@ -68,8 +68,8 @@ int main()
 	NowHeight =  1.;
 
   unsigned int seed = 0;
-  NowTemp = 0.; //GetTemp(NowMonth, seed);
-  NowPrecip = 0.;//GetPrecip(NowMonth, seed);
+  NowTemp = GetTemp(NowMonth, seed);
+  NowPrecip = GetPrecip(NowMonth, seed);
   /*8float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin( ang );
   NowPrecip = precip + Ranf( &seed,  -RANDOM_PRECIP, RANDOM_PRECIP );
   if( NowPrecip < 0. )
@@ -144,8 +144,8 @@ void Watcher()
     }
     //TODO: re-compute all environmental variables 
     unsigned int seed = 0;
-    NowTemp = 0.; //GetTemp(NowMonth, seed);
-    NowPrecip = 0.; //GetPrecip(NowMonth, seed);
+    NowTemp = GetTemp(NowMonth, seed);
+    NowPrecip = GetPrecip(NowMonth, seed);
     
     fprintf(stderr, "Watcher waiting at Barrier #3.\n");
     WaitBarrier(); 
@@ -280,22 +280,21 @@ int Ranf( unsigned int *seedp, int ilow, int ihigh )
         return (int)(  Ranf(seedp, low,high) );
 }
 
-/*float GetTemp(const int Month, unsigned int *Seed)
+float GetTemp(const int Month, unsigned int Seed)
 {
   float ang = (  30.*(float)Month + 15.  ) * ( M_PI / 180. );
   float temp = AVG_TEMP - AMP_TEMP * cos( ang );
-  temp += Ranf( Seed, -RANDOM_TEMP, RANDOM_TEMP );
+  temp += Ranf( &Seed, -RANDOM_TEMP, RANDOM_TEMP );
   return temp;
 }
 
-float GetPrecip(const int Month, unsigned int *Seed)
+float GetPrecip(const int Month, unsigned int Seed)
 {
   float ang = (  30.*(float)Month + 15.  ) * ( M_PI / 180. );
   float temp = AVG_TEMP - AMP_TEMP * cos( ang );
-  temp += Ranf( Seed, -RANDOM_TEMP, RANDOM_TEMP );
+  temp += Ranf( &Seed, -RANDOM_TEMP, RANDOM_TEMP );
   return temp;
 }
-*/
 
 /*void OpenAndInitCsvFile(const char *prog_name)
 {
