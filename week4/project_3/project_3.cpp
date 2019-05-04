@@ -2,7 +2,9 @@
 #include <omp.h>
 #include <math.h>
 #include <ctime>
+#include <cstdio>
 #include <string>
+#include <fstream>
 
 #ifndef _OPENMP
   fprintf(stderr, "OpenMP is not supported\n");
@@ -43,14 +45,14 @@ omp_lock_t Lock;
 
 
 //prototypes
-const char* OpenAndInitCsv(const char *PROGNAME);
+std::string OpenCsv(const std::string PROGNAME);
+//void OpenAndInitCsv(std::string PROGNAME);
 /*void WriteResultsToCsvFile(const char* FileName, const int NowYear, const int NowMonth, const float\
     Grain, const int GrainDeer, const int Humans, const float Temp, const float Precip); 
 */
 int Ranf( unsigned int *seedp, int ilow, int ihigh );
 float Ranf( unsigned int *seedp,  float low, float high );
-//void Watcher(const char *FileName);
-void Watcher();
+void Watcher(std::string filename);
 void Grain();
 void GrainDeer();
 void Humans();
@@ -78,15 +80,16 @@ int main()
 	//chb: ??
 	omp_init_lock( &Lock );
 	InitBarrier( NUMT );
-  
+
+  std::string CsvFileName = OpenCsv(PROGNAME);
+
 	omp_set_num_threads( 4 );	// same as # of sections
-  #pragma omp parallel sections
+  #pragma omp parallel sections private(CsvFileName)
   {
 		//sets and prints out state
     #pragma omp section
     {
-      //Watcher(CsvFileName);
-      Watcher();
+      Watcher("CsvFileName");
     }
 
     #pragma omp section
@@ -108,8 +111,7 @@ int main()
   } // implied barrier 
 }
 
-//void Watcher(const char *CsvFileName)
-void Watcher()
+void Watcher(std::string filename)
 {
   //unsigned int seed = (unsigned int)std::time(nullptr);  // a thread-private variable
 
@@ -128,6 +130,7 @@ void Watcher()
     WaitBarrier(); 
     fprintf(stderr, "Watcher resuming at Barrier #2.\n");
 
+    fprintf(stdout, "%s\n", filename.c_str());
     //write out "now " state of data
     /*WriteResultsToCsvFile(CsvFileName, NowYear, NowMonth, NowHeight, NowNumDeer, NowNumHumans,\
         NowTemp, NowPrecip); */
@@ -295,9 +298,10 @@ float GetPrecip(const int Month, unsigned int Seed)
   return precip; 
 }
 
-const char* OpenAndInitCsvFile(const char *prog_name)
+
+/*void OpenAndInitCsvFile(std::string prog_name)
 {
-  /*std::string filename(prog_name);
+  std::string filename(prog_name);
   time_t now = time(nullptr);
   filename = filename + "_" + std::to_string(now) + ".csv";
   
@@ -305,9 +309,23 @@ const char* OpenAndInitCsvFile(const char *prog_name)
   proj3_csv.open(filename, std::ios::out);
   std::string header = "Month/Year,Grain,GrainDeer,Hunters,Temp(F),Rain(in.)";
   proj3_csv << header << std::endl; 
-  */
-  return prog_name;
+  return filename;
 }
+*/
+std::string OpenCsv(const std::string prog_name)
+{
+  std::string filename(prog_name);
+  time_t now = time(nullptr);
+  filename = filename + "_" + std::to_string(now) + ".csv";
+  
+  std::ofstream proj3_csv;
+  proj3_csv.open(filename, std::ios::out);
+  std::string header = "Month/Year,Grain,GrainDeer,Hunters,Temp(F),Rain(in.)";
+  proj3_csv << header << std::endl; 
+  
+  return filename;
+}
+
 /*  
 void WriteResultsToCsvFile(const int NowYear, const int NowMonth, const float Grain, const int GrainDeer, const int Hunters, const float Temp, const float Precip) 
 {
