@@ -40,9 +40,9 @@ int NumInThreadTeam;
 omp_lock_t Lock;
 
 
-/*prototypes
-char* OpenAndInitCsv(const char *PROGNAME);
-void WriteResultsToCsvFile(const char* FileName, const int NowYear, const int NowMonth, const float\
+//prototypes
+const char* OpenAndInitCsv(const char *PROGNAME);
+/*void WriteResultsToCsvFile(const char* FileName, const int NowYear, const int NowMonth, const float\
     Grain, const int GrainDeer, const int Humans, const float Temp, const float Precip); 
 */
 int Ranf( unsigned int *seedp, int ilow, int ihigh );
@@ -70,11 +70,6 @@ int main()
   unsigned int seed = 0;
   NowTemp = GetTemp(NowMonth, seed);
   NowPrecip = GetPrecip(NowMonth, seed);
-  /*8float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin( ang );
-  NowPrecip = precip + Ranf( &seed,  -RANDOM_PRECIP, RANDOM_PRECIP );
-  if( NowPrecip < 0. )
-    NowPrecip = 0.;
-  */
   //chb
   NowNumHumans = 1;
 
@@ -291,14 +286,16 @@ float GetTemp(const int Month, unsigned int Seed)
 float GetPrecip(const int Month, unsigned int Seed)
 {
   float ang = (  30.*(float)Month + 15.  ) * ( M_PI / 180. );
-  float temp = AVG_TEMP - AMP_TEMP * cos( ang );
-  temp += Ranf( &Seed, -RANDOM_TEMP, RANDOM_TEMP );
-  return temp;
+  float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin( ang );
+  precip += Ranf( &Seed,  -RANDOM_PRECIP, RANDOM_PRECIP );
+  if( precip < 0. )
+    precip = 0.;
+  return precip; 
 }
 
-/*void OpenAndInitCsvFile(const char *prog_name)
+const char* OpenAndInitCsvFile(const char *prog_name)
 {
-  std::string filename(prog_name);
+  /*std::string filename(prog_name);
   time_t now = time(nullptr);
   filename = filename + "_" + std::to_string(now) + ".csv";
   
@@ -306,8 +303,10 @@ float GetPrecip(const int Month, unsigned int Seed)
   proj3_csv.open(filename, std::ios::out);
   std::string header = "Month/Year,Grain,GrainDeer,Hunters,Temp(F),Rain(in.)";
   proj3_csv << header << std::endl; 
+  */
+  return prog_name;
 }
-  
+/*  
 void WriteResultsToCsvFile(const int NowYear, const int NowMonth, const float Grain, const int GrainDeer, const int Hunters, const float Temp, const float Precip) 
 {
   std::string filename1(prog_name);
