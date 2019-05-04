@@ -2,6 +2,7 @@
 #include <omp.h>
 #include <math.h>
 #include <ctime>
+#include <string>
 
 #ifndef _OPENMP
   fprintf(stderr, "OpenMP is not supported\n");
@@ -9,6 +10,7 @@
 #endif 
 
 const int NUMT = 4;
+const std::string PROGNAME = "project_3";
 
 int	NowYear;		// 2019 - 2024
 int	NowMonth;		// 0 - 11
