@@ -46,10 +46,8 @@ omp_lock_t Lock;
 
 //prototypes
 std::string OpenCsv(const std::string PROGNAME);
-//void OpenAndInitCsv(std::string PROGNAME);
-/*void WriteResultsToCsvFile(const char* FileName, const int NowYear, const int NowMonth, const float\
+void WriteResults(std::string FileName, const int NowYear, const int NowMonth, const float\
     Grain, const int GrainDeer, const int Humans, const float Temp, const float Precip); 
-*/
 int Ranf( unsigned int *seedp, int ilow, int ihigh );
 float Ranf( unsigned int *seedp,  float low, float high );
 void Watcher(std::string filename);
@@ -132,8 +130,8 @@ void Watcher(std::string filename)
 
     fprintf(stdout, "%s\n", filename.c_str());
     //write out "now " state of data
-    /*WriteResultsToCsvFile(CsvFileName, NowYear, NowMonth, NowHeight, NowNumDeer, NowNumHumans,\
-        NowTemp, NowPrecip); */
+    WriteResults(filename, NowYear, NowMonth, NowHeight, NowNumDeer, NowNumHumans,\
+        NowTemp, NowPrecip); 
     //advance time
     if(NowMonth < 12)
       NowMonth++;
@@ -326,27 +324,22 @@ std::string OpenCsv(const std::string prog_name)
   return filename;
 }
 
-/*  
-void WriteResultsToCsvFile(const int NowYear, const int NowMonth, const float Grain, const int GrainDeer, const int Hunters, const float Temp, const float Precip) 
+void WriteResults(std::string File, const int NowYear, const int NowMonth, const float Grain, const int GrainDeer, const int Hunters, const float Temp, const float Precip) 
 {
-  std::string filename1(prog_name);
-  filename1 = filename1 + "_mflops_" + std::to_string(threads) + "_" + std::to_string(trials) + ".csv";
-  //DEBUG
-  //fprintf(stderr, "filename: %s\n", filename.c_str());
-	
+	const char DELIM = ',';	
 	//build strings for writing a line at a time
-	std::string header("threads,trials,hit_prob,mega_trials");
-	std::string results_mflops(std::to_string(threads) + "," + \
-      std::to_string(trials) + "," + std::to_string(hit_prob) + "," + std::to_string(mega_trials));
-
-  
-  if (!does_file_exist(filename1))
-    outFile_mflops.open(filename1, std::ios::out);
+	std::string state = std::to_string(NowMonth) + "/" + std::to_string(NowYear) + DELIM +\
+		std::to_string(Grain) + DELIM + std::to_string(GrainDeer) + DELIM + std::to_string(Hunters) + DELIM\
+		+ std::to_string(Temp) + DELIM + std::to_string(Precip);
+ 	
+	std::ofstream csvout; 
+ 
+  if (!fopen(File.c_str(), "a"))
+  	fprintf(stderr, "Cannot write to nonexistant file. Exiting.\n"); 
   else
-    outFile_mflops.open(filename1, std::ios::app);
+    csvout.open(File, std::ios::app);
   
-  outFile_mflops << results_mflops << std::endl;
+	csvout << state << std::endl;
   //file closed via RAII
 }
 
-*/
