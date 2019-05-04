@@ -1,21 +1,14 @@
-#include <time.h>
 #include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
 #include <omp.h>
-
-#include <fstream>
-#include <string>
+#include <math.h>
+#include <ctime>
 
 #ifndef _OPENMP
   fprintf(stderr, "OpenMP is not supported\n");
   exit(EXIT_FAILURE);
 #endif 
 
-const char *PROGNAME = "project_3";
 const int NUMT = 4;
-
-char* CsvFileName;
 
 int	NowYear;		// 2019 - 2024
 int	NowMonth;		// 0 - 11
@@ -47,24 +40,25 @@ int NumInThreadTeam;
 omp_lock_t Lock;
 
 
-//prototypes
+/*prototypes
 char* OpenAndInitCsv(const char *PROGNAME);
 void WriteResultsToCsvFile(const char* FileName, const int NowYear, const int NowMonth, const float\
     Grain, const int GrainDeer, const int Humans, const float Temp, const float Precip); 
+*/
 int Ranf( unsigned int *seedp, int ilow, int ihigh );
 float Ranf( unsigned int *seedp,  float low, float high );
-void Watcher(const char *FileName);
+//void Watcher(const char *FileName);
+void Watcher();
 void Grain();
 void GrainDeer();
 void Humans();
 void WaitBarrier();
 void InitBarrier(int t);
-float GetTemp(const int Month);
+//float GetTemp(const int Month, unsigned int seed);
+//float GetPrecip(const int Month, unsigned int seed);
 
 int main()
 {
-  CsvFileName = OpenAndInitCsv(PROGNAME);
-
 	// starting date and time:
 	NowMonth =    0;
 	NowYear  = 2019;
@@ -73,15 +67,14 @@ int main()
 	NowNumDeer = 1;
 	NowHeight =  1.;
 
-  float ang = (  30.*(float)NowMonth + 15.  ) * ( M_PI / 180. );
-
-  NowTemp = GetTemp(NowMonth);
-
-  float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin( ang );
+  unsigned int seed = 0;
+  NowTemp = 0.; //GetTemp(NowMonth, seed);
+  NowPrecip = 0.;//GetPrecip(NowMonth, seed);
+  /*8float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin( ang );
   NowPrecip = precip + Ranf( &seed,  -RANDOM_PRECIP, RANDOM_PRECIP );
   if( NowPrecip < 0. )
     NowPrecip = 0.;
-
+  */
   //chb
   NowNumHumans = 1;
 
@@ -95,9 +88,8 @@ int main()
 		//sets and prints out state
     #pragma omp section
     {
-      Watcher(CsvFileName);
-			
-			//Write to CSV here?
+      //Watcher(CsvFileName);
+      Watcher();
     }
 
     #pragma omp section
@@ -119,9 +111,10 @@ int main()
   } // implied barrier 
 }
 
-void Watcher(const char *CsvFileName)
+//void Watcher(const char *CsvFileName)
+void Watcher()
 {
-  unsigned int seed = (u_int)time(nullptr);  // a thread-private variable
+  //unsigned int seed = (unsigned int)std::time(nullptr);  // a thread-private variable
 
   while( NowYear < 2025 )
 	{
@@ -139,8 +132,8 @@ void Watcher(const char *CsvFileName)
     fprintf(stderr, "Watcher resuming at Barrier #2.\n");
 
     //write out "now " state of data
-    WriteResultsToCsvFile(CsvFileName, NowYear, NowMonth, NowHeight, NowNumDeer, NowNumHumans,\
-        NowTemp, NowPrecip); 
+    /*WriteResultsToCsvFile(CsvFileName, NowYear, NowMonth, NowHeight, NowNumDeer, NowNumHumans,\
+        NowTemp, NowPrecip); */
     //advance time
     if(NowMonth < 12)
       NowMonth++;
@@ -150,8 +143,9 @@ void Watcher(const char *CsvFileName)
       NowMonth = 0;
     }
     //TODO: re-compute all environmental variables 
-    NowTemp = GetTemp(NowMonth);
-    NowPrecip = GetPrecip(//TODO 
+    unsigned int seed = 0;
+    NowTemp = 0.; //GetTemp(NowMonth, seed);
+    NowPrecip = 0.; //GetPrecip(NowMonth, seed);
     
     fprintf(stderr, "Watcher waiting at Barrier #3.\n");
     WaitBarrier(); 
@@ -263,15 +257,12 @@ void WaitBarrier( )
   }
 	omp_unset_lock( &Lock );
 
-	while( NumAtBarrier != 0 );	// this waits for the nth thread to arrive
+	while( NumAtBarrier != 0 )
+  ;	// this waits for the nth thread to arrive
 
 	#pragma omp atomic
     NumGone++;			// this flags how many threads have returned
 }
-
-
-//chb: is this intended to be in each thread? 
-float x = Ranf( &seed, -1.f, 1.f );
 
 float Ranf( unsigned int *seedp,  float low, float high )
 {
@@ -289,7 +280,7 @@ int Ranf( unsigned int *seedp, int ilow, int ihigh )
         return (int)(  Ranf(seedp, low,high) );
 }
 
-float GetTemp(const int Month, u_int *Seed)
+/*float GetTemp(const int Month, unsigned int *Seed)
 {
   float ang = (  30.*(float)Month + 15.  ) * ( M_PI / 180. );
   float temp = AVG_TEMP - AMP_TEMP * cos( ang );
@@ -297,8 +288,16 @@ float GetTemp(const int Month, u_int *Seed)
   return temp;
 }
 
+float GetPrecip(const int Month, unsigned int *Seed)
+{
+  float ang = (  30.*(float)Month + 15.  ) * ( M_PI / 180. );
+  float temp = AVG_TEMP - AMP_TEMP * cos( ang );
+  temp += Ranf( Seed, -RANDOM_TEMP, RANDOM_TEMP );
+  return temp;
+}
+*/
 
-void OpenAndInitCsvFile(const char *prog_name)
+/*void OpenAndInitCsvFile(const char *prog_name)
 {
   std::string filename(prog_name);
   time_t now = time(nullptr);
@@ -332,4 +331,4 @@ void WriteResultsToCsvFile(const int NowYear, const int NowMonth, const float Gr
   //file closed via RAII
 }
 
-
+*/
