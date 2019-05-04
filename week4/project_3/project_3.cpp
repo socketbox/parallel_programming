@@ -5,11 +5,13 @@
 #include <cstdio>
 #include <string>
 #include <fstream>
+#include <iostream>
 
-#ifndef _OPENMP
+/*#ifndef _OPENMP
   fprintf(stderr, "OpenMP is not supported\n");
   exit(EXIT_FAILURE);
 #endif 
+*/
 
 const int NUMT = 4;
 const std::string PROGNAME = "project_3";
@@ -43,8 +45,11 @@ int NumAtBarrier = 0;
 int NumInThreadTeam;
 omp_lock_t Lock;
 
+//rand_r
+unsigned int seed = 0;
 
 //prototypes
+float sqr(float x);
 std::string OpenCsv(const std::string PROGNAME);
 void WriteResults(std::string FileName, const int NowYear, const int NowMonth, const float\
     Grain, const int GrainDeer, const int Humans, const float Temp, const float Precip); 
@@ -69,24 +74,25 @@ int main()
 	NowNumDeer = 1;
 	NowHeight =  1.;
 
-  unsigned int seed = 0;
+  seed = (unsigned int)std::time(nullptr);  
   NowTemp = GetTemp(NowMonth, seed);
   NowPrecip = GetPrecip(NowMonth, seed);
   //chb
   NowNumHumans = 1;
 
-	//chb: ??
 	omp_init_lock( &Lock );
 	InitBarrier( NUMT );
 
-  std::string CsvFileName = OpenCsv(PROGNAME);
+  //DEBUG
+  //std::cout << "This is filename outside of pragma: " << CsvFileName << std::endl;
 
 	omp_set_num_threads( 4 );	// same as # of sections
-  #pragma omp parallel sections private(CsvFileName)
+  #pragma omp parallel sections 
   {
 		//sets and prints out state
     #pragma omp section
     {
+      std::string CsvFileName = OpenCsv(PROGNAME);
       Watcher(CsvFileName);
     }
 
@@ -105,13 +111,13 @@ int main()
       Humans( );	// your own
     }
 
-
   } // implied barrier 
 }
 
 void Watcher(std::string filename)
 {
   //unsigned int seed = (unsigned int)std::time(nullptr);  // a thread-private variable
+  //unsigned int seed = 0;
 
   while( NowYear < 2025 )
 	{
@@ -133,7 +139,7 @@ void Watcher(std::string filename)
     WriteResults(filename, NowYear, NowMonth, NowHeight, NowNumDeer, NowNumHumans,\
         NowTemp, NowPrecip); 
     //advance time
-    if(NowMonth < 12)
+    if(NowMonth < 11)
       NowMonth++;
     else
     {
@@ -141,7 +147,6 @@ void Watcher(std::string filename)
       NowMonth = 0;
     }
     //TODO: re-compute all environmental variables 
-    unsigned int seed = 0;
     NowTemp = GetTemp(NowMonth, seed);
     NowPrecip = GetPrecip(NowMonth, seed);
     
@@ -155,15 +160,22 @@ void GrainDeer()
 {
 	while( NowYear < 2025 )
 	{
-    // compute a temporary next-value for this quantity
-		// based on the current state of the simulation:
-    //int nextXXX = calcNextFoo();
+    /*   
+   The Carrying Capacity of the graindeer is the number of inches of height of the grain. If the number of graindeer exceeds this value at the end of a month, decrease the number of graindeer by one. If the number of graindeer is less than this value at the end of a month, increase the number of graindeer by one. */
+		int NextNumDeer;	
+		if(NowHeight > NowNumDeer)
+			NextNumDeer++;
+		else
+			NextNumDeer--;
+		
+		if(NextNumDeer < 1)
+			NextNumDeer = 1;
+	 
     fprintf(stderr, "GrainDeer waiting at Barrier #1.\n");
     WaitBarrier(); 
     fprintf(stderr, "GrainDeer resuming at Barrier #1.\n");
     
-    //chb: write next to now
-    //NowXXX = nextXXX;
+    NowNumDeer = NextNumDeer;
     fprintf(stderr, "GrainDeer waiting at Barrier #2.\n");
     WaitBarrier(); 
     fprintf(stderr, "GrainDeer resuming at Barrier #2.\n");
@@ -179,15 +191,21 @@ void Grain()
 {
 	while( NowYear < 2025 )
 	{
-	  // compute a temporary next-value for this quantity
-		// based on the current state of the simulation:
-    //int nextXXX = calcNextFoo();
+	  float tempFactor = exp(   -sqr(  ( NowTemp - MIDTEMP ) / 10.  )   );
+    float precipFactor = exp(   -sqr(  ( NowPrecip - MIDPRECIP ) / 10.  )   );
+    float NextHeight; 
+    std::cout << "This is tempFactor: " << std::to_string(tempFactor) << std::endl; 
+    std::cout << "This is precipFactor: " << std::to_string(precipFactor) << std::endl; 
+    NextHeight += tempFactor * precipFactor * GRAIN_GROWS_PER_MONTH;
+    NextHeight -= (float)NowNumDeer * ONE_DEER_EATS_PER_MONTH;
+    if(NextHeight < 0.)
+      NextHeight = 0.;   
+
     fprintf(stderr, "Grain waiting at Barrier #1.\n");
     WaitBarrier(); 
     fprintf(stderr, "Grain resuming at Barrier #1.\n");
     
-    //chb: write next to now
-    //NowXXX = nextXXX;
+    NowHeight = NextHeight;
     fprintf(stderr, "Grain waiting at Barrier #2.\n");
     WaitBarrier(); 
     fprintf(stderr, "Grain resuming at Barrier #2.\n");
@@ -195,25 +213,35 @@ void Grain()
     fprintf(stderr, "Grain waiting at Barrier #3.\n");
     WaitBarrier(); 
     fprintf(stderr, "Grain resuming at Barrier #3.\n");
-
 	}
 
 }
 
 void Humans()
 {
+	float NextNumHumans;
+
 	while( NowYear < 2025 )
 	{
-	  // compute a temporary next-value for this quantity
-		// based on the current state of the simulation:
-    //int nextXXX = calcNextFoo();
-    fprintf(stderr, "Humans waiting at Barrier #1.\n");
+		
+		if(NowNumHumans > NowNumDeer)    
+		{
+			NextNumHumans--; 
+		}
+		else
+		{
+			NextNumHumans++;
+		}
+		if(NextNumHumans < 1)
+			NextNumHumans = 1;
+	
+		fprintf(stderr, "Humans waiting at Barrier #1.\n");
     WaitBarrier(); 
     fprintf(stderr, "Humans resuming at Barrier #1.\n");
     
-    //chb: write next to now
-    //NowXXX = nextXXX;
-    fprintf(stderr, "Humans waiting at Barrier #2.\n");
+   	NowNumHumans = NextNumHumans; 
+
+		fprintf(stderr, "Humans waiting at Barrier #2.\n");
     WaitBarrier(); 
     fprintf(stderr, "Humans resuming at Barrier #2.\n");
     
@@ -278,6 +306,11 @@ int Ranf( unsigned int *seedp, int ilow, int ihigh )
         return (int)(  Ranf(seedp, low,high) );
 }
 
+float sqr(float x)
+{
+  return x*x;
+}
+
 float GetTemp(const int Month, unsigned int Seed)
 {
   float ang = (  30.*(float)Month + 15.  ) * ( M_PI / 180. );
@@ -304,18 +337,19 @@ std::string OpenCsv(const std::string prog_name)
   
   std::ofstream proj3_csv;
   proj3_csv.open(filename, std::ios::out);
-  std::string header = "Month/Year,Grain,GrainDeer,Hunters,Temp(F),Rain(in.)";
+  std::string header = "Month/Year,Grain,GrainDeer,Humans,Temp(F),Rain(in.)";
   proj3_csv << header << std::endl; 
-  
+  proj3_csv.close(); 
   return filename;
 }
 
-void WriteResults(std::string File, const int NowYear, const int NowMonth, const float Grain, const int GrainDeer, const int Hunters, const float Temp, const float Precip) 
+void WriteResults(std::string File, const int NowYear, const int NowMonth, const float Grain, const int GrainDeer, const int Humans, const float Temp, const float Precip) 
 {
+  std::cout << "This is filename: " << File << std::endl;
 	const char DELIM = ',';	
 	//build strings for writing a line at a time
 	std::string state = std::to_string(NowMonth) + "/" + std::to_string(NowYear) + DELIM +\
-		std::to_string(Grain) + DELIM + std::to_string(GrainDeer) + DELIM + std::to_string(Hunters) + DELIM\
+		std::to_string(Grain) + DELIM + std::to_string(GrainDeer) + DELIM + std::to_string(Humans) + DELIM\
 		+ std::to_string(Temp) + DELIM + std::to_string(Precip);
  	
 	std::ofstream csvout; 
