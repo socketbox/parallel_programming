@@ -87,7 +87,7 @@ int main()
 		//sets and prints out state
     #pragma omp section
     {
-      Watcher("CsvFileName");
+      Watcher(CsvFileName);
     }
 
     #pragma omp section
@@ -296,20 +296,6 @@ float GetPrecip(const int Month, unsigned int Seed)
   return precip; 
 }
 
-
-/*void OpenAndInitCsvFile(std::string prog_name)
-{
-  std::string filename(prog_name);
-  time_t now = time(nullptr);
-  filename = filename + "_" + std::to_string(now) + ".csv";
-  
-  std::ofstream proj3_csv;
-  proj3_csv.open(filename, std::ios::out);
-  std::string header = "Month/Year,Grain,GrainDeer,Hunters,Temp(F),Rain(in.)";
-  proj3_csv << header << std::endl; 
-  return filename;
-}
-*/
 std::string OpenCsv(const std::string prog_name)
 {
   std::string filename(prog_name);
