@@ -75,7 +75,8 @@ int main()
 	NowHeight =  1.;
 
   seed = (unsigned int)std::time(nullptr);  
-  NowTemp = GetTemp(NowMonth, seed);
+  
+	NowTemp = GetTemp(NowMonth, seed);
   NowPrecip = GetPrecip(NowMonth, seed);
   //chb
   NowNumHumans = 1;
@@ -158,11 +159,11 @@ void Watcher(std::string filename)
 
 void GrainDeer()
 {
+	int NextNumDeer;
 	while( NowYear < 2025 )
 	{
     /*   
    The Carrying Capacity of the graindeer is the number of inches of height of the grain. If the number of graindeer exceeds this value at the end of a month, decrease the number of graindeer by one. If the number of graindeer is less than this value at the end of a month, increase the number of graindeer by one. */
-		int NextNumDeer;	
 		if(NowHeight > NowNumDeer)
 			NextNumDeer++;
 		else
@@ -170,19 +171,17 @@ void GrainDeer()
 		
 		if(NextNumDeer < 1)
 			NextNumDeer = 1;
-	 
-    fprintf(stderr, "GrainDeer waiting at Barrier #1.\n");
+	
+		if(NextNumDeer < 1)
+			std::cout << "Error: Deer extirpated" << std::endl;
+ 
     WaitBarrier(); 
-    fprintf(stderr, "GrainDeer resuming at Barrier #1.\n");
     
     NowNumDeer = NextNumDeer;
-    fprintf(stderr, "GrainDeer waiting at Barrier #2.\n");
-    WaitBarrier(); 
-    fprintf(stderr, "GrainDeer resuming at Barrier #2.\n");
     
-    fprintf(stderr, "GrainDeer waiting at Barrier #3.\n");
+		WaitBarrier(); 
+    
     WaitBarrier(); 
-    fprintf(stderr, "GrainDeer resuming at Barrier #3.\n");
 	}
 
 }
