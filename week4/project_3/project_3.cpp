@@ -15,10 +15,10 @@
 
 const int NUMT = 4;
 const std::string PROGNAME = "project_3";
+int seed = std::time(nullptr);  
 
 int	NowYear;		// 2019 - 2024
 int	NowMonth;		// 0 - 11
-
 float	NowPrecip;		// inches of rain per month
 float	NowTemp;		// temperature this month
 float	NowHeight;		// grain height in inches
@@ -45,15 +45,13 @@ int NumAtBarrier = 0;
 int NumInThreadTeam;
 omp_lock_t Lock;
 
-//rand_r
-unsigned int seed = 0;
-
 //prototypes
 float sqr(float x);
 std::string OpenCsv(const std::string PROGNAME);
 void WriteResults(std::string FileName, const int NowYear, const int NowMonth, const float\
     Grain, const int GrainDeer, const int Humans, const float Temp, const float Precip); 
-int Ranf( unsigned int *seedp, int ilow, int ihigh );
+//int Ranf( unsigned int *seedp, int ilow, int ihigh );
+int Ranf(  int ilow, int ihigh );
 float Ranf( unsigned int *seedp,  float low, float high );
 void Watcher(std::string filename);
 void Grain();
@@ -66,28 +64,24 @@ float GetPrecip(const int Month, unsigned int seed);
 
 int main()
 {
-	// starting date and time:
+  std::srand(seed);	
+  
+  // starting date and time:
 	NowMonth =    0;
 	NowYear  = 2019;
 
 	// starting state (feel free to change this if you want):
-	NowNumDeer = 1;
+	NowNumDeer = 10;
 	NowHeight =  1.;
-
-  seed = (unsigned int)std::time(nullptr);  
+  NowNumHumans = 5;
   
 	NowTemp = GetTemp(NowMonth, seed);
   NowPrecip = GetPrecip(NowMonth, seed);
-  //chb
-  NowNumHumans = 1;
-
+  
 	omp_init_lock( &Lock );
 	InitBarrier( NUMT );
 
-  //DEBUG
-  //std::cout << "This is filename outside of pragma: " << CsvFileName << std::endl;
-
-	omp_set_num_threads( 4 );	// same as # of sections
+	omp_set_num_threads( NUMT );	// same as # of sections
   #pragma omp parallel sections 
   {
 		//sets and prints out state
@@ -99,17 +93,17 @@ int main()
 
     #pragma omp section
     {
-      GrainDeer( );
+      GrainDeer();
     }
 
     #pragma omp section
     {
-      Grain( );
+      Grain();
     }
 
     #pragma omp section
     {
-      Humans( );	// your own
+      Humans();
     }
 
   } // implied barrier 
@@ -117,28 +111,18 @@ int main()
 
 void Watcher(std::string filename)
 {
-  //unsigned int seed = (unsigned int)std::time(nullptr);  // a thread-private variable
-  //unsigned int seed = 0;
-
   while( NowYear < 2025 )
 	{
 		// compute a temporary next-value for this quantity
 		// based on the current state of the simulation:
-    //int nextXXX = calcNextFoo();
-    fprintf(stderr, "Watcher waiting at Barrier #1.\n");
     WaitBarrier(); 
-    fprintf(stderr, "Watcher resuming at Barrier #1.\n");
     
-    //chb: write next to now
-    //NowXXX = nextXXX;
-    fprintf(stderr, "Watcher waiting at Barrier #2.\n");
     WaitBarrier(); 
-    fprintf(stderr, "Watcher resuming at Barrier #2.\n");
 
-    fprintf(stdout, "%s\n", filename.c_str());
     //write out "now " state of data
     WriteResults(filename, NowYear, NowMonth, NowHeight, NowNumDeer, NowNumHumans,\
         NowTemp, NowPrecip); 
+    
     //advance time
     if(NowMonth < 11)
       NowMonth++;
@@ -147,13 +131,11 @@ void Watcher(std::string filename)
       NowYear++; 
       NowMonth = 0;
     }
-    //TODO: re-compute all environmental variables 
+    
     NowTemp = GetTemp(NowMonth, seed);
     NowPrecip = GetPrecip(NowMonth, seed);
     
-    fprintf(stderr, "Watcher waiting at Barrier #3.\n");
     WaitBarrier(); 
-    fprintf(stderr, "Watcher resuming at Barrier #3.\n");
   }
 }
 
@@ -163,18 +145,20 @@ void GrainDeer()
 	while( NowYear < 2025 )
 	{
     /*   
-   The Carrying Capacity of the graindeer is the number of inches of height of the grain. If the number of graindeer exceeds this value at the end of a month, decrease the number of graindeer by one. If the number of graindeer is less than this value at the end of a month, increase the number of graindeer by one. */
-		if(NowHeight > NowNumDeer)
+     The Carrying Capacity of the graindeer is the number of inches of height of the grain. If the
+     number of graindeer exceeds this value at the end of a month, decrease the number of graindeer
+     by one. If the number of graindeer is less than this value at the end of a month, increase the
+     number of graindeer by one. */
+    
+    if(NowHeight > NowNumDeer)
 			NextNumDeer++;
 		else
 			NextNumDeer--;
 		
+    //deer cannot be extirpated in this sim
 		if(NextNumDeer < 1)
 			NextNumDeer = 1;
 	
-		if(NextNumDeer < 1)
-			std::cout << "Error: Deer extirpated" << std::endl;
- 
     WaitBarrier(); 
     
     NowNumDeer = NextNumDeer;
@@ -193,32 +177,28 @@ void Grain()
 	  float tempFactor = exp(   -sqr(  ( NowTemp - MIDTEMP ) / 10.  )   );
     float precipFactor = exp(   -sqr(  ( NowPrecip - MIDPRECIP ) / 10.  )   );
     float NextHeight; 
-    std::cout << "This is tempFactor: " << std::to_string(tempFactor) << std::endl; 
-    std::cout << "This is precipFactor: " << std::to_string(precipFactor) << std::endl; 
+    //DEBUG 
+    //std::cout << "This is tempFactor: " << std::to_string(tempFactor) << std::endl; 
+    //std::cout << "This is precipFactor: " << std::to_string(precipFactor) << std::endl; 
     NextHeight += tempFactor * precipFactor * GRAIN_GROWS_PER_MONTH;
     NextHeight -= (float)NowNumDeer * ONE_DEER_EATS_PER_MONTH;
     if(NextHeight < 0.)
       NextHeight = 0.;   
 
-    fprintf(stderr, "Grain waiting at Barrier #1.\n");
     WaitBarrier(); 
-    fprintf(stderr, "Grain resuming at Barrier #1.\n");
     
     NowHeight = NextHeight;
-    fprintf(stderr, "Grain waiting at Barrier #2.\n");
-    WaitBarrier(); 
-    fprintf(stderr, "Grain resuming at Barrier #2.\n");
     
-    fprintf(stderr, "Grain waiting at Barrier #3.\n");
     WaitBarrier(); 
-    fprintf(stderr, "Grain resuming at Barrier #3.\n");
+    
+    WaitBarrier(); 
 	}
 
 }
 
 void Humans()
 {
-	float NextNumHumans;
+	int NextNumHumans;
 
 	while( NowYear < 2025 )
 	{
@@ -289,20 +269,24 @@ void WaitBarrier( )
     NumGone++;			// this flags how many threads have returned
 }
 
-float Ranf( unsigned int *seedp,  float low, float high )
+//float Ranf( unsigned int *seedp,  float low, float high )
+float Ranf( float low, float high )
 {
   // 0 - RAND_MAX
-  float r = (float) rand_r( seedp ); 
+  //float r = (float) rand_r( seedp ); 
+  float r = (float) rand(); 
+  std::cerr << "This is r from Ranf : " << std::to_string(r) << std::endl; 
   return(   low  +  r * ( high - low ) / (float)RAND_MAX   );
 }
 
 
-int Ranf( unsigned int *seedp, int ilow, int ihigh )
+//int Ranf( unsigned int *seedp, int ilow, int ihigh )
+int Ranf(  int ilow, int ihigh )
 {
         float low = (float)ilow;
         float high = (float)ihigh + 0.9999f;
-
-        return (int)(  Ranf(seedp, low,high) );
+        //return (int)(  Ranf(seedp, low,high) );
+        return (int)(  Ranf(low,high) );
 }
 
 float sqr(float x)
@@ -310,19 +294,23 @@ float sqr(float x)
   return x*x;
 }
 
-float GetTemp(const int Month, unsigned int Seed)
+//float GetTemp(const int Month, unsigned int Seed)
+float GetTemp(const int Month)
 {
   float ang = (  30.*(float)Month + 15.  ) * ( M_PI / 180. );
   float temp = AVG_TEMP - AMP_TEMP * cos( ang );
-  temp += Ranf( &Seed, -RANDOM_TEMP, RANDOM_TEMP );
+  //temp += Ranf( &Seed, -RANDOM_TEMP, RANDOM_TEMP );
+  temp += Ranf( -RANDOM_TEMP, RANDOM_TEMP );
   return temp;
 }
 
-float GetPrecip(const int Month, unsigned int Seed)
+//float GetPrecip(const int Month, unsigned int Seed)
+float GetPrecip(const int Month)
 {
   float ang = (  30.*(float)Month + 15.  ) * ( M_PI / 180. );
   float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin( ang );
-  precip += Ranf( &Seed,  -RANDOM_PRECIP, RANDOM_PRECIP );
+  //precip += Ranf( &Seed,  -RANDOM_PRECIP, RANDOM_PRECIP );
+  precip += Ranf( -RANDOM_PRECIP, RANDOM_PRECIP );
   if( precip < 0. )
     precip = 0.;
   return precip; 
