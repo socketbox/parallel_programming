@@ -13,6 +13,10 @@
 #endif 
 */
 
+#ifndef DEBUG
+#define DEBUG false
+#endif
+
 const int NUMT = 4;
 const std::string PROGNAME = "project_3";
 int seed = std::time(nullptr);  
@@ -59,8 +63,9 @@ void GrainDeer();
 void Humans();
 void WaitBarrier();
 void InitBarrier(int t);
-float GetTemp(const int Month, unsigned int seed);
-float GetPrecip(const int Month, unsigned int seed);
+int GetHumans();
+float GetTemp(const int Month);
+float GetPrecip(const int Month);
 
 int main()
 {
@@ -71,12 +76,12 @@ int main()
 	NowYear  = 2019;
 
 	// starting state (feel free to change this if you want):
-	NowNumDeer = 10;
-	NowHeight =  1.;
+	NowNumDeer = 5;
+	NowHeight =  2.;
   NowNumHumans = 5;
   
-	NowTemp = GetTemp(NowMonth, seed);
-  NowPrecip = GetPrecip(NowMonth, seed);
+	NowTemp = GetTemp(NowMonth);
+  NowPrecip = GetPrecip(NowMonth);
   
 	omp_init_lock( &Lock );
 	InitBarrier( NUMT );
@@ -132,8 +137,8 @@ void Watcher(std::string filename)
       NowMonth = 0;
     }
     
-    NowTemp = GetTemp(NowMonth, seed);
-    NowPrecip = GetPrecip(NowMonth, seed);
+    NowTemp = GetTemp(NowMonth);
+    NowPrecip = GetPrecip(NowMonth);
     
     WaitBarrier(); 
   }
@@ -202,31 +207,22 @@ void Humans()
 
 	while( NowYear < 2025 )
 	{
-		
-		if(NowNumHumans > NowNumDeer)    
-		{
-			NextNumHumans--; 
-		}
-		else
-		{
-			NextNumHumans++;
-		}
-		if(NextNumHumans < 1)
+    NextNumHumans = GetHumans();
+    
+    if(NextNumHumans < 1)
+    {
 			NextNumHumans = 1;
-	
-		fprintf(stderr, "Humans waiting at Barrier #1.\n");
+      if(DEBUG)
+        std::cout << "Humans Clamped" << std::endl;
+    }
+
     WaitBarrier(); 
-    fprintf(stderr, "Humans resuming at Barrier #1.\n");
     
    	NowNumHumans = NextNumHumans; 
 
-		fprintf(stderr, "Humans waiting at Barrier #2.\n");
     WaitBarrier(); 
-    fprintf(stderr, "Humans resuming at Barrier #2.\n");
     
-    fprintf(stderr, "Humans waiting at Barrier #3.\n");
     WaitBarrier(); 
-    fprintf(stderr, "Humans resuming at Barrier #3.\n");
 
 	}
 
@@ -275,7 +271,8 @@ float Ranf( float low, float high )
   // 0 - RAND_MAX
   //float r = (float) rand_r( seedp ); 
   float r = (float) rand(); 
-  std::cerr << "This is r from Ranf : " << std::to_string(r) << std::endl; 
+  //DEBUG 
+  //std::cerr << "This is r from Ranf : " << std::to_string(r) << std::endl; 
   return(   low  +  r * ( high - low ) / (float)RAND_MAX   );
 }
 
@@ -316,6 +313,27 @@ float GetPrecip(const int Month)
   return precip; 
 }
 
+int GetHumans()
+{
+  float h = NowNumHumans;
+  if(DEBUG)
+  {
+    std::cout << "Humans before tmp/height adjust: " << h << std::endl;
+    std::cout << "Humans with rounding: " << std::to_string(round(h*1.08)) << std::endl;
+  }
+  if(NowTemp < 32)
+    h--;
+  if(NowNumDeer >= h)
+    h++;
+  if(NowHeight < 1)
+    h--;
+  if(NowHeight < 1 && NowTemp < 32)
+    h *= .75;
+  else if(NowNumDeer < h*.25 && NowHeight < 1 && NowTemp < 32)
+    h *= .5;
+  return round(h*1.08); 
+}
+
 std::string OpenCsv(const std::string prog_name)
 {
   std::string filename(prog_name);
@@ -325,6 +343,8 @@ std::string OpenCsv(const std::string prog_name)
   std::ofstream proj3_csv;
   proj3_csv.open(filename, std::ios::out);
   std::string header = "Month/Year,Grain,GrainDeer,Humans,Temp(F),Rain(in.)";
+  if(DEBUG)
+    std::cout << header << std::endl;
   proj3_csv << header << std::endl; 
   proj3_csv.close(); 
   return filename;
@@ -332,12 +352,14 @@ std::string OpenCsv(const std::string prog_name)
 
 void WriteResults(std::string File, const int NowYear, const int NowMonth, const float Grain, const int GrainDeer, const int Humans, const float Temp, const float Precip) 
 {
-  std::cout << "This is filename: " << File << std::endl;
 	const char DELIM = ',';	
 	//build strings for writing a line at a time
-	std::string state = std::to_string(NowMonth) + "/" + std::to_string(NowYear) + DELIM +\
+	std::string state = std::to_string(NowMonth+1) + "/" + std::to_string(NowYear) + DELIM +\
 		std::to_string(Grain) + DELIM + std::to_string(GrainDeer) + DELIM + std::to_string(Humans) + DELIM\
 		+ std::to_string(Temp) + DELIM + std::to_string(Precip);
+  
+  if(DEBUG)
+    std::cout << state << std::endl;
  	
 	std::ofstream csvout; 
  
