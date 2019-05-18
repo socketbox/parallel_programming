@@ -1,15 +1,15 @@
 simd.p4.o:	simd.p4.h  simd.p4.cpp
 		g++  -c  simd.p4.cpp -o simd.p4.o
 
-arraymult:	boettchc_cs475-400_project4.cpp simd.p4.o
-		g++ $(CPPFLAGS) -lm -fopenmp simd.p4.o -o arraymult  boettchc_cs475-400_project4.cpp 
+proj4:	boettchc_cs475-400_project4.cpp simd.p4.o
+		g++ $(CPPFLAGS) -std=c++11 -lm -fopenmp simd.p4.o -o proj4  boettchc_cs475-400_project4.cpp 
 
 clean:
-		rm -f arraymult
-		rm -f arraymult.csv
-		rm -f arraymult.tgz
+		rm -f proj4
+		rm -f proj4.csv
+		rm -f proj4.tgz
 
 dist:
-		tar zcvf arraymult.tgz *.cpp *.h
-		scp arraymult.tgz flip\:./cs475/week5/
+		tar zcvf proj4.tgz *.cpp *.h Makefile run_me.sh
+		scp proj4.tgz flip\:./cs475/week5/
 
